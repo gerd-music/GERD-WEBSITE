@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/mwta/anaudiofairytale/enter",
+      "destination": "/enter.html"
+    },
+    {
+      "source": "/mwta/anaudiofairytale/void",
+      "destination": "/void.html"
+    }
+  ]
+}
