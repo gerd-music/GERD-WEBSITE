@@ -59,7 +59,8 @@
       background: radial-gradient(ellipse 90% 85% at 50% 50%, transparent 40%, rgba(18,30,27,0.6) 100%);
     }
 
-    .container {
+
+.container {
       position: relative;
       width: 100vw;
       height: 100vh;
@@ -94,7 +95,7 @@
       font-size: 0.44rem;
       letter-spacing: 0.32em;
       text-transform: uppercase;
-      color: rgba(190,188,170,0.2);
+      color: rgba(190,188,170,0.45);
     }
 
     .col-header.right { text-align: right; }
@@ -114,13 +115,20 @@
     }
 
     .portfolio-container.has-active .project-item:not(.active) {
-      opacity: 0.1;
+      opacity: 0.5;
     }
+
+    .project-item.active .project-data,
+    .project-item.active .dl-btn {
+      color: rgba(0,0,0,0.82);
+    }
+    .project-item.active .project-data.album::before { color: rgba(0,0,0,0.82); }
+    .project-item.active .project-data.artist { color: rgba(0,0,0,0.82); }
 
     .project-data {
       font-size: 0.7rem;
       letter-spacing: 0.07em;
-      color: rgba(190,188,170,0.45);
+      color: rgba(190,188,170,0.7);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -134,21 +142,32 @@
     }
 
     .project-data.albumName {
-      color: rgba(190,188,170,0.3);
+      color: rgba(190,188,170,0.55);
       font-size: 0.68rem;
     }
 
     .project-data.year {
       text-align: right;
-      color: rgba(190,188,170,0.3);
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
     }
 
-    .project-item.active .project-data {
-      color: #bebcaa;
+    .dl-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      color: rgba(190,188,170,0.55);
+      transition: color 0.2s ease, transform 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
     }
-    .project-item.active .project-data.year {
-      color: rgba(190,188,170,0.5);
-    }
+    .dl-btn:hover { color: #bebcaa; transform: translateY(1px); }
+    .dl-btn.disabled { color: rgba(190,188,170,0.18); cursor: default; pointer-events: none; }
+    .project-item.active .dl-btn { color: rgba(190,188,170,0.75); }
 
     /* Background image */
     .background-image {
@@ -163,15 +182,28 @@
       opacity: 0;
       z-index: 1;
       pointer-events: none;
-      filter: brightness(0.5) saturate(0.65);
+      filter: none;
     }
+
 
     .background-image.fullscreen {
       top: 0 !important;
       left: 0 !important;
       width: 100% !important;
       height: 100% !important;
-      filter: brightness(0.6) saturate(0.5);
+      transform: none !important;
+      filter: none;
+    }
+
+    .background-image.contain {
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      transform: none !important;
+      background-size: contain !important;
+      background-position: center !important;
+      filter: none;
     }
 
     /* Corner elements */
@@ -188,7 +220,7 @@
       font-size: 0.5rem;
       letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: rgba(190,188,170,0.28);
+      color: rgba(190,188,170,0.6);
       pointer-events: auto;
     }
 
@@ -205,7 +237,7 @@
     }
 
     .corner-link {
-      color: rgba(190,188,170,0.28);
+      color: rgba(190,188,170,0.6);
       text-decoration: none;
       font-size: 0.5rem;
       letter-spacing: 0.22em;
@@ -251,11 +283,46 @@
     /* Audio playback */
     .project-item[data-audio] { cursor: pointer; }
 
-    .project-item.playing .project-data.album::before {
-      content: '▶  ';
-      font-size: 0.48rem;
+    .project-item.playing {
+      position: relative;
+    }
+    .project-item.playing::after {
+      content: '';
+      position: absolute;
+      inset: -2px -1rem;
+      background: radial-gradient(ellipse at 50% 50%, rgba(190,188,170,0.07) 0%, transparent 70%);
+      pointer-events: none;
+      animation: glowPulse 2.8s ease-in-out infinite;
+      border-radius: 2px;
+    }
+    @keyframes glowPulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    .project-data.album::before {
+      content: '\25B7\FE0E  ';
+      font-size: 0.7rem;
       letter-spacing: 0;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      color: rgba(190,188,170,0.6);
+    }
+
+    .project-item:hover .project-data.album::before {
+      opacity: 1;
+    }
+
+    .project-item.playing .project-data.album::before {
+      content: '\25B6\FE0E  ';
+      opacity: 1;
+      color: #bebcaa;
       animation: pulsePlay 1.4s ease-in-out infinite;
+    }
+
+    @media (hover: none) {
+      .project-data.album::before { opacity: 0.6; }
+      .project-item.playing .project-data.album::before { content: '\25B6\FE0E  '; opacity: 1; color: #bebcaa; }
     }
 
     @keyframes pulsePlay {
@@ -401,6 +468,7 @@
 
       .portfolio-container { padding: 0 1.25rem; }
       .project-item { grid-template-columns: 1.2fr 1.8fr 0.5fr; }
+      .column-headers { grid-template-columns: 1.2fr 1.8fr 0.5fr; }
       .project-data.albumName { display: none; }
       .col-header:nth-child(3) { display: none; }
 
@@ -411,8 +479,10 @@
       .corner-item.bottom-left  { bottom: 3rem;   left: 1.25rem; font-size: 0.55rem !important; }
       .corner-item.bottom-right { bottom: 1.75rem; left: 1.25rem; right: auto; font-size: 0.55rem !important; }
 
-      /* Hide top-right nav on very small screens */
-      .corner-item.top-right { display: none; }
+      /* Hide full nav on mobile, show only Spotify */
+      .corner-item.top-right { display: flex; }
+      .corner-link.hide-mobile, .corner-sep { display: none; }
+      .corner-link.spotify-mobile { display: inline; }
 
       /* Logo 30% bigger on mobile */
       #gerd-logo { height: 38px !important; }
@@ -440,7 +510,7 @@
       <span class="col-header">Artist</span>
       <span class="col-header">Title</span>
       <span class="col-header">Album</span>
-      <span class="col-header right">Year</span>
+      <span class="col-header right">Download</span>
     </div>
 
     <ul class="project-list" id="project-list" role="list"></ul>
@@ -450,17 +520,17 @@
 
   <aside class="corner-elements" aria-hidden="true">
     <div class="corner-item top-left">
-      <a href="https://gerd-music.github.io/GERD-WEBSITE/"><img src="brand_assets/GERD_WHITE.png" alt="GERD" id="gerd-logo" style="height:22px;width:auto;opacity:0.35;display:block;"></a>
+      <a href="https://gerd-music.github.io/GERD-WEBSITE/"><img src="brand_assets/GERD_WHITE.png" alt="GERD" id="gerd-logo" style="height:22px;width:auto;opacity:0.65;display:block;"></a>
     </div>
     <nav class="corner-item top-right">
-      <a href="https://gerd-music.github.io/GERD-WEBSITE/" class="corner-link">Home</a>
+      <a href="https://gerd-music.github.io/GERD-WEBSITE/" class="corner-link hide-mobile">Home</a>
       <span class="corner-sep">|</span>
-      <a href="https://open.spotify.com/artist/1deUwYFF6apHHvv4p3wCjr" target="_blank" rel="noopener" class="corner-link">Spotify</a>
+      <a href="https://open.spotify.com/artist/1deUwYFF6apHHvv4p3wCjr" target="_blank" rel="noopener" class="corner-link spotify-mobile">Spotify</a>
       <span class="corner-sep">|</span>
-      <a href="mailto:gerd.contact@gmail.com" class="corner-link">Contact</a>
+      <a href="mailto:gerd.contact@gmail.com" class="corner-link hide-mobile">Contact</a>
     </nav>
-    <div class="corner-item bottom-left" style="font-size:1rem;">More Water Than Anything</div>
-    <div class="corner-item bottom-right" style="font-size:1rem;">AN AUDIO FAIRYTALE</div>
+    <div class="corner-item bottom-left" style="font-size:1rem;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-style:italic;">More Water Than Anything</div>
+    <div class="corner-item bottom-right" style="font-size:1rem;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-style:italic;">AN AUDIO FAIRYTALE</div>
   </aside>
 
 </div>
@@ -500,18 +570,18 @@
 
   // ── DATA ─────────────────────────────────────────────────────────────────
   const PROJECTS = [
-    { id: 1, artist:'GERD', album:'Intro',                    albumName:'More Water Than Anything', year:'2026', image:'brand_assets/outro sketch.png', fullscreen:true },
-    { id: 2, artist:'GERD', album:'Hurts',                    albumName:'More Water Than Anything', year:'2026', image:'brand_assets/hurts sketch.png', fullscreen:true },
-    { id: 3, artist:'GERD', album:'Love Economy',             albumName:'More Water Than Anything', year:'2026', image:'brand_assets/album-cover.jpg' },
-    { id: 4, artist:'GERD', album:'Truth To Be Told',         albumName:'More Water Than Anything', year:'2026', image:'' },
-    { id: 5, artist:'GERD', album:'Lonley Phone People',        albumName:'More Water Than Anything', year:'2026', image:'brand_assets/LONLEY PHONE PEOPLE sketch.png', fullscreen:true },
-    { id: 6, artist:'GERD', album:'Summer Fields (interlude)', albumName:'More Water Than Anything', year:'2026', image:'' },
-    { id: 7, artist:'GERD', album:'Louder And Louder',         albumName:'More Water Than Anything', year:'2026', image:'brand_assets/lauder and luader sketch.png', fullscreen:true, audio:'brand_assets/louder and louder test mmm.mp3' },
-    { id: 8, artist:'GERD', album:'Know Me Better',            albumName:'More Water Than Anything', year:'2026', image:'' },
-    { id: 9, artist:'GERD', album:'Crazy',                     albumName:'More Water Than Anything', year:'2026', image:'' },
-    { id:10, artist:'GERD', album:'Garden (wish you knew)',    albumName:'More Water Than Anything', year:'2026', image:'' },
-    { id:11, artist:'GERD', album:'Outro',                     albumName:'More Water Than Anything', year:'2026', image:'brand_assets/outro sketch.png', fullscreen:true },
-    { id:12, artist:'GERD', album:'Voice Memo',                albumName:'More Water Than Anything', year:'2026', image:'' },
+    { id: 1, artist:'GERD', album:'Intro',                    albumName:'More Water Than Anything', year:'2026', image:'brand_assets/outro sketch.png', contain:true },
+    { id: 2, artist:'GERD', album:'Hurts',                    albumName:'More Water Than Anything', year:'2026', image:'brand_assets/gerd illustrationer jpg/Hurts.jpg', contain:true },
+    { id: 3, artist:'GERD', album:'Love Economy',             albumName:'More Water Than Anything', year:'2026', image:'brand_assets/gerd illustrationer jpg/Love_Economy.jpg', contain:true },
+    { id: 4, artist:'GERD', album:'Truth To Be Told',         albumName:'More Water Than Anything', year:'2026', image:'brand_assets/gerd illustrationer jpg/Truth_To_Be_Told.jpg', contain:true },
+    { id: 5, artist:'GERD', album:'Lonley Phone People',      albumName:'More Water Than Anything', year:'2026', image:'brand_assets/gerd illustrationer jpg/Lonely_Phone_People.jpg', contain:true },
+    { id: 6, artist:'GERD', album:'Summer Fields (interlude)', albumName:'More Water Than Anything', year:'2026', image:'brand_assets/gerd illustrationer jpg/Summerfields.jpg', contain:true },
+    { id: 7, artist:'GERD', album:'Louder And Louder',        albumName:'More Water Than Anything', year:'2026', image:'brand_assets/gerd illustrationer jpg/Louder_And_Louder.jpg', contain:true, audio:'brand_assets/louder and louder test mmm.mp3' },
+    { id: 8, artist:'GERD', album:'Know Me Better',           albumName:'More Water Than Anything', year:'2026', image:'brand_assets/gerd illustrationer jpg/Know_Me_Better.jpg', contain:true },
+    { id: 9, artist:'GERD', album:'Crazy',                    albumName:'More Water Than Anything', year:'2026', image:'brand_assets/gerd illustrationer jpg/Crazy.jpg', contain:true },
+    { id:10, artist:'GERD', album:'Garden (wish you knew)',   albumName:'More Water Than Anything', year:'2026', image:'brand_assets/gerd illustrationer jpg/Garden.jpg', contain:true },
+    { id:11, artist:'GERD', album:'Outro',                    albumName:'More Water Than Anything', year:'2026', image:'brand_assets/outro sketch.png', contain:true },
+    { id:12, artist:'GERD', album:'Voice Memo',               albumName:'More Water Than Anything', year:'2026', image:'' },
   ];
 
   // Preload images
@@ -528,14 +598,34 @@
     li.dataset.index = index;
     li.dataset.image      = project.image || '';
     li.dataset.fullscreen = project.fullscreen ? 'true' : '';
+    li.dataset.contain    = project.contain    ? 'true' : '';
 
-    ['artist','album','albumName','year'].forEach(key => {
+    ['artist','album','albumName'].forEach(key => {
       const span = document.createElement('span');
       span.className        = `project-data ${key}`;
       span.dataset.original = project[key];
       span.textContent      = project[key];
       li.appendChild(span);
     });
+
+    // Download column
+    const dlCell = document.createElement('span');
+    dlCell.className = 'project-data year';
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'dl-btn' + (project.audio ? '' : ' disabled');
+    dlBtn.setAttribute('aria-label', 'Download ' + project.album);
+    dlBtn.innerHTML = `<svg width="13" height="14" viewBox="0 0 13 14" fill="currentColor"><path d="M6.5 0v9M3 6l3.5 3.5L10 6M1 12h11" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>`;
+    if (project.audio) {
+      dlBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const a = document.createElement('a');
+        a.href = project.audio;
+        a.download = project.album + '.mp3';
+        a.click();
+      });
+    }
+    dlCell.appendChild(dlBtn);
+    li.appendChild(dlCell);
 
     list.appendChild(li);
   });
@@ -609,7 +699,7 @@
     if (activeIdx !== -1) {
       const prev = items[activeIdx];
       prev.classList.remove('active');
-      prev.querySelectorAll('.project-data').forEach(resetScramble);
+      prev.querySelectorAll('.project-data[data-original]').forEach(resetScramble);
     }
 
     activeIdx = index;
@@ -617,28 +707,31 @@
     item.classList.add('active');
     container.classList.add('has-active');
 
-    // Scramble
-    item.querySelectorAll('.project-data').forEach(span => scramble(span, span.dataset.original));
+    // Scramble (skip download cell which has no text)
+    item.querySelectorAll('.project-data[data-original]').forEach(span => scramble(span, span.dataset.original));
 
     // Background image
     const src          = item.dataset.image;
     const isFullscreen = item.dataset.fullscreen === 'true';
+    const isContain    = item.dataset.contain    === 'true';
     if (src) {
       bg.classList.toggle('fullscreen', isFullscreen);
+      bg.classList.toggle('contain',    isContain);
       bg.style.backgroundImage = `url("${src}")`;
       bg.style.transition      = 'none';
-      bg.style.transform       = isFullscreen
-        ? 'scale(1.06)'
+      bg.style.transform       = (isFullscreen || isContain)
+        ? 'scale(1.0)'
         : 'translate(-50%, -50%) scale(1.18)';
       bg.style.opacity         = '1';
       requestAnimationFrame(() => requestAnimationFrame(() => {
         bg.style.transition = 'opacity 0.55s ease, transform 0.95s cubic-bezier(0.25,0.46,0.45,0.94)';
-        bg.style.transform  = isFullscreen
+        bg.style.transform  = (isFullscreen || isContain)
           ? 'scale(1.0)'
           : 'translate(-50%, -50%) scale(1.0)';
       }));
     } else {
       bg.classList.remove('fullscreen');
+      bg.classList.remove('contain');
       bg.style.transition = 'opacity 0.3s ease';
       bg.style.opacity    = '0';
     }
@@ -647,11 +740,11 @@
   function deactivateAll() {
     if (activeIdx !== -1) {
       items[activeIdx].classList.remove('active');
-      items[activeIdx].querySelectorAll('.project-data').forEach(resetScramble);
+      items[activeIdx].querySelectorAll('.project-data[data-original]').forEach(resetScramble);
     }
     activeIdx = -1;
     container.classList.remove('has-active');
-    bg.classList.remove('fullscreen');
+bg.classList.remove('fullscreen');
     bg.style.transition = 'opacity 0.4s ease';
     bg.style.opacity    = '0';
     startIdleTimer();
@@ -766,7 +859,24 @@
     }
   });
 
+  trackAudio.addEventListener('ended', () => {
+    if (currentPL !== -1 && currentPL < playlist.length - 1) {
+      loadTrack(currentPL + 1, true);
+    } else {
+      isPlaying = false;
+      setPlayBtn(false);
+      if (currentPL !== -1) items[playlist[currentPL].itemIndex].classList.remove('playing');
+    }
+  });
+
   btnPlay.addEventListener('click', togglePlay);
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && e.target === document.body) {
+      e.preventDefault();
+      togglePlay();
+    }
+  });
 
   btnNext.addEventListener('click', () => {
     if (currentPL === -1 && playlist.length) { loadTrack(0, true); return; }
@@ -835,6 +945,7 @@
 
 })();
 </script>
+
 
 </body>
 </html>
