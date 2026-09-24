@@ -9,44 +9,138 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Alice&display=swap" rel="stylesheet">
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #121e1b; font-family: 'Alice', serif; }
 
-    #bg-canvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; display: block; }
-
-    #overlay {
-      position: fixed; inset: 0; z-index: 2; pointer-events: none;
-      background: rgba(8,14,13,0.45);
-    }
-    #vignette {
-      position: fixed; inset: 0; z-index: 3; pointer-events: none;
-      background: radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(8,14,13,0.85) 100%);
-    }
-    #grain {
-      position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0.3;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    html, body { height: 100%; }
+    body {
+      background: #031C26; /* shader's own lowest tone, shows for an instant before the canvas paints */
+      color: #bebcaa;
+      font-family: 'Alice', serif;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
     }
 
-    #page {
-      position: fixed; inset: 0; z-index: 5;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3.5rem;
-      opacity: 0; transition: opacity 1.2s ease;
+    /* Animated shader backdrop — shared by both the welcome text and the
+       card stack, so there's nothing to "reveal" between them */
+    #shader-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
     }
-    #page.visible { opacity: 1; }
-    #page.fadeout { opacity: 0 !important; transition: opacity 0.7s ease !important; }
 
-    #logo { width: min(400px, 74vw); opacity: 0.9; display: block; }
+    /* Film grain — shared across both screens */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: -100px;
+      pointer-events: none;
+      z-index: 300;
+      opacity: 0.05;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)'/%3E%3C/svg%3E");
+      animation: grain 0.9s steps(1) infinite;
+    }
+    @keyframes grain {
+      0%,100% { transform: translate(0,0);    }
+      10%     { transform: translate(-3%,-2%); }
+      20%     { transform: translate(2%,3%);   }
+      30%     { transform: translate(-2%,1%);  }
+      40%     { transform: translate(3%,-3%);  }
+      50%     { transform: translate(-1%,2%);  }
+      60%     { transform: translate(2%,-1%);  }
+      70%     { transform: translate(-3%,3%);  }
+      80%     { transform: translate(1%,-2%);  }
+      90%     { transform: translate(-2%,-1%); }
+    }
 
+    /* Vignette — shared across both screens */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 250;
+      background: radial-gradient(ellipse 90% 85% at 50% 50%, transparent 40%, rgba(18,30,27,0.6) 100%);
+    }
+
+    /* Persistent top-left mark — present before and after entering, never transitions */
     .corner-logo {
       position: fixed;
       top: 2rem; left: 2.5rem;
-      z-index: 6;
+      z-index: 200;
     }
     .corner-logo img { height: 22px; width: auto; opacity: 0.65; display: block; }
     @media (max-width: 640px) {
       .corner-logo { top: 1.5rem; left: 1.5rem; }
       .corner-logo img { height: 32px; }
+    }
+
+    /* ── ENTER SCREEN ─────────────────────────────────────────────────────── */
+
+    #enter-content {
+      position: fixed; inset: 0; z-index: 5;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1.3rem;
+      padding: 1.5rem;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+    #enter-content.visible { opacity: 1; }
+    #enter-content.leaving {
+      opacity: 0 !important;
+      transition: opacity 0.7s ease !important;
+      pointer-events: none;
+    }
+
+    .hero-text {
+      width: min(680px, 84vw);
+      max-height: 34vh;
+      overflow-y: auto;
+      text-align: center;
+      color: rgba(255,255,255,0.95);
+      text-shadow: 0 2px 14px rgba(0,0,0,0.85), 0 1px 4px rgba(0,0,0,0.9);
+    }
+    .hero-disclaimer {
+      font-family: 'Alice', serif;
+      font-style: italic;
+      font-size: clamp(0.66rem, 1.05vw, 0.74rem);
+      line-height: 1.5;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 1.1rem;
+    }
+    .hero-heading {
+      font-family: 'Alice', serif;
+      font-size: clamp(1rem, 2.1vw, 1.25rem);
+      letter-spacing: 0.02em;
+      line-height: 1.35;
+      margin-bottom: 0.8rem;
+    }
+    .hero-body p {
+      font-family: 'Alice', serif;
+      font-size: clamp(0.76rem, 1.25vw, 0.86rem);
+      line-height: 1.55;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 0.55rem;
+    }
+    .hero-sign {
+      font-family: 'Alice', serif;
+      font-style: italic;
+      font-size: clamp(0.78rem, 1.25vw, 0.88rem);
+      color: rgba(255,255,255,0.92);
+      margin-top: 0.4rem;
+    }
+
+    @media (max-width: 640px) {
+      .hero-text { width: 88vw; max-height: 39vh; }
+      .hero-disclaimer { font-size: 0.64rem; margin-bottom: 0.8rem; }
+      .hero-heading { font-size: 0.98rem; margin-bottom: 0.6rem; }
+      .hero-body p { font-size: 0.74rem; margin-bottom: 0.45rem; }
+      #enter-content { gap: 0.9rem; }
     }
 
     #enter-btn {
@@ -85,166 +179,843 @@
     #enter-btn:hover #enter-text,
     #enter-btn:focus-visible #enter-text { color: #bebcaa; }
 
+    /* ── VOID SCREEN (stacking cards) ─────────────────────────────────────── */
+    /* Fades and settles in from a slight zoom, on top of the expanded hero */
+    #void-content {
+      opacity: 0;
+      transform: scale(1.08);
+      pointer-events: none;
+      transition: opacity 1.1s cubic-bezier(0.65,0,0.35,1), transform 1.1s cubic-bezier(0.65,0,0.35,1);
+    }
+    #void-content.entering { opacity: 1; transform: scale(1); }
+    #void-content.active { pointer-events: auto; }
+
+    .container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 6;
+    }
+
+    .stack-scroll {
+      width: 100%;
+      max-width: 1240px;
+      max-height: calc(100vh - 3rem);
+      max-height: calc(100dvh - 3rem);
+      overflow-y: auto;
+      overflow-x: hidden;
+      position: relative;
+      z-index: 2;
+      padding: 0 3rem;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(190,188,170,0.3) transparent;
+    }
+
+    .stack-card-wrap {
+      height: 900px;
+      position: sticky;
+      top: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .stack-card {
+      transform-origin: top center;
+      position: relative;
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      flex-direction: column;
+      background: #0b1516;
+      border: 1px solid rgba(190,188,170,0.14);
+      border-radius: 20px;
+      box-shadow: 0 25px 55px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+
+    .stack-card-img {
+      width: 100%;
+      aspect-ratio: 1500 / 1400;
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-color: rgba(190,188,170,0.04);
+      border-bottom: 1px solid rgba(190,188,170,0.1);
+      flex-shrink: 0;
+    }
+
+    .stack-card-info { display: flex; flex-direction: column; align-items: center; gap: 1rem; min-width: 0; padding: 1.3rem 2.7rem 2rem; text-align: center; }
+    .stack-card-title { font-size: 2.3rem; letter-spacing: 0.03em; color: #bebcaa; line-height: 1.15; }
+
+    /* Floating mini-player, per card */
+    .stack-player {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      padding: 1rem 1.2rem 0.9rem;
+      border-radius: 20px;
+      background: #0b1516;
+      border: 1px solid rgba(190,188,170,0.14);
+      backdrop-filter: blur(6px);
+    }
+    .stack-player:has(.stack-player-play:disabled) { opacity: 0.45; }
+
+    .stack-player-slider {
+      position: relative;
+      width: 100%;
+      height: 18px;
+      cursor: pointer;
+    }
+    .stack-player-slider::before {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; top: 50%;
+      transform: translateY(-50%);
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(190,188,170,0.18);
+    }
+    .stack-player-slider-fill {
+      position: absolute;
+      left: 0; top: 50%;
+      transform: translateY(-50%);
+      height: 3px;
+      border-radius: 2px;
+      width: 0%;
+      background: #bebcaa;
+      pointer-events: none;
+    }
+    .stack-player-slider-thumb {
+      position: absolute;
+      top: 50%; left: 0%;
+      transform: translate(-50%,-50%);
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: #bebcaa;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+    .stack-player-slider:hover .stack-player-slider-thumb { opacity: 1; }
+    .stack-player:has(.stack-player-play:disabled) .stack-player-slider { pointer-events: none; cursor: default; }
+
+    .stack-player-times {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.62rem;
+      letter-spacing: 0.05em;
+      color: rgba(190,188,170,0.5);
+    }
+
+    .stack-player-controls { display: flex; align-items: center; justify-content: center; gap: 0.3rem; }
+    .stack-player-btn {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: none;
+      background: none;
+      color: rgba(190,188,170,0.75);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: color 0.2s ease, background 0.2s ease;
+      flex-shrink: 0;
+    }
+    .stack-player-btn:hover:not(:disabled) { color: #bebcaa; background: rgba(190,188,170,0.08); }
+    .stack-player-btn:disabled { opacity: 0.3; cursor: default; }
+    .stack-player-btn.active { color: #bebcaa; background: rgba(190,188,170,0.12); }
+
+    .stack-player-play {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(190,188,170,0.35);
+      background: none;
+      color: #bebcaa;
+      margin: 0 0.15rem;
+    }
+    .stack-player-play:hover:not(:disabled) { border-color: #bebcaa; background: rgba(190,188,170,0.1); }
+    .stack-player-play:disabled { opacity: 0.25; cursor: default; border-color: rgba(190,188,170,0.35); }
+
+    .stack-player-play svg { transform: scale(1.15); }
+
+
+    @media (max-width: 640px) {
+      .stack-scroll { max-height: calc(100vh - 2rem); max-height: calc(100dvh - 2rem); }
+      .stack-card { max-width: 100%; border-radius: 16px; }
+      .stack-card-wrap { height: calc(100vh - 2rem); height: calc(100dvh - 2rem); align-items: center; }
+      .stack-card-info { padding: 1rem 1.25rem 1.3rem; gap: 0.7rem; }
+      .stack-card-title { font-size: 1.6rem; }
+      .stack-player { max-width: 100%; padding: 0.9rem 0.9rem 0.8rem; border-radius: 18px; gap: 0.8rem; }
+      .stack-player-controls { gap: 0.4rem; }
+      .stack-player-btn { width: 44px; height: 44px; }
+      .stack-player-btn svg { width: 20px; height: 20px; }
+      .stack-player-play { width: 64px; height: 64px; }
+      .stack-player-play svg { width: 18px; height: 22px; transform: none; }
+    }
+
+    /* Corner elements — top-right nav + bottom-right tagline (top-left is the shared .corner-logo) */
+    .corner-elements {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .corner-item {
+      position: absolute;
+      font-family: 'Alice', serif;
+      font-size: 0.5rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(190,188,170,0.6);
+      pointer-events: auto;
+    }
+
+    .corner-item.top-right { top: 2rem; right: 2.5rem; display: flex; gap: 0.9rem; align-items: center; }
+    .corner-item.bottom-right { bottom: 2rem; right: 2.5rem; }
+
+    .corner-item.top-right a {
+      display: block;
+      opacity: 0.65;
+      filter: drop-shadow(0 1px 6px rgba(0,0,0,0.5));
+      transition: opacity 0.25s ease;
+    }
+    .corner-item.top-right a:hover { opacity: 1; }
+    .corner-item.top-right img { height: 18px; width: 18px; display: block; }
+
+    /* Custom cursor */
     * { cursor: none !important; }
     #custom-cursor {
-      position: fixed; pointer-events: none; z-index: 9999;
-      width: 38px; height: 38px; transform: translate(-50%,-50%);
-      opacity: 0; transition: opacity 0.3s ease;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      width: 38px;
+      height: 38px;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
     }
     @media (hover: none) {
       * { cursor: auto !important; }
       #custom-cursor { display: none !important; }
       #enter-btn { cursor: pointer !important; }
     }
+
+    .sr-only {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── PLAYER BAR ────────────────────────────────────────────────────── */
+    .player-bar {
+      display: none; /* disabled for now — the per-card mini players cover playback */
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 150;
+      background: rgba(18,30,27,0.97);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-top: 1px solid rgba(190,188,170,0.08);
+      transform: translateY(100%);
+      transition: transform 0.5s cubic-bezier(0.16,1,0.3,1);
+    }
+    .player-bar.visible { transform: translateY(0); }
+
+    .player-seek {
+      position: relative;
+      height: 20px;
+      cursor: pointer;
+      background: transparent;
+    }
+    .player-seek::before {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      top: 50%; transform: translateY(-50%);
+      height: 2px;
+      background: rgba(190,188,170,0.1);
+      transition: height 0.18s ease;
+      pointer-events: none;
+    }
+    .player-seek:hover::before { height: 3px; }
+
+    .player-seek-fill {
+      position: absolute;
+      left: 0; top: 50%;
+      transform: translateY(-50%);
+      height: 2px;
+      width: 0%;
+      background: rgba(190,188,170,0.55);
+      pointer-events: none;
+      z-index: 1;
+      transition: background 0.2s ease, height 0.18s ease;
+    }
+    .player-seek:hover .player-seek-fill { background: #bebcaa; height: 3px; }
+
+    .player-seek-thumb {
+      position: absolute;
+      top: 50%; left: 0%;
+      transform: translate(-50%, -50%);
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #bebcaa;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 2;
+      transition: opacity 0.18s ease;
+    }
+    .player-seek:hover .player-seek-thumb { opacity: 1; }
+
+    .player-controls {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 0.85rem 2.5rem;
+    }
+
+    .player-btns {
+      display: flex;
+      align-items: center;
+      gap: 1.1rem;
+      flex: 0 0 auto;
+    }
+
+    .player-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      color: rgba(190,188,170,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s ease, transform 0.15s ease;
+      line-height: 0;
+    }
+    .player-btn:hover  { color: #bebcaa; }
+    .player-btn:active { transform: scale(0.88); }
+
+    .player-btn-play {
+      color: #bebcaa;
+      width: 30px; height: 30px;
+      border: 1px solid rgba(190,188,170,0.2);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .player-btn-play:hover { border-color: rgba(190,188,170,0.55); }
+
+    .player-info {
+      flex: 1;
+      min-width: 0;
+      text-align: center;
+    }
+    .player-track-name {
+      font-size: 0.56rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(190,188,170,0.5);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .player-track-name strong {
+      color: rgba(190,188,170,0.82);
+      font-weight: normal;
+    }
+
+    .player-time {
+      font-family: 'Alice', serif;
+      font-size: 0.96rem;
+      letter-spacing: 0.2em;
+      color: rgba(190,188,170,0.28);
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    @media (max-width: 640px) {
+      .stack-scroll { padding: 0 1.25rem; }
+      .corner-item.bottom-right { display: none; }
+      .corner-item.top-right { display: none; }
+    }
   </style>
 </head>
 <body>
 
-<canvas id="bg-canvas"></canvas>
-<div id="overlay"></div>
-<div id="vignette"></div>
-<div id="grain"></div>
+<canvas id="shader-bg"></canvas>
 
-<div class="corner-logo"><img src="brand_assets/GERD_WHITE.png" alt="GERD"></div>
+<!-- Persistent mark: present on both screens, unaffected by the transition -->
+<div class="corner-logo"><a href="https://gerd-music.github.io/GERD-WEBSITE/"><img src="brand_assets/GERD_WHITE.png" alt="GERD"></a></div>
 
-<div id="page" style="gap:0;justify-content:center;padding-bottom:6vh;">
-  <div style="display:flex;flex-direction:column;align-items:center;width:min(400px,74vw);gap:0;">
-    <img id="logo" src="brand_assets/MORE WATR THAN ANYTHING LOGA VIT.png" alt="More Water Than Anything">
-    <button id="enter-btn" aria-label="Enter" style="margin-top:2.5rem;align-self:center;">
-      <span class="vf-corner vf-tl">✦</span>
-      <span class="vf-corner vf-tr">✦</span>
-      <span class="vf-corner vf-bl">✦</span>
-      <span class="vf-corner vf-br">✦</span>
-      <span id="enter-text">ENTER</span>
-    </button>
+<!-- ── ENTER SCREEN ────────────────────────────────────────────────────── -->
+<div id="enter-content">
+  <div class="hero-text">
+    <p class="hero-disclaimer">A small note: The recorded stories are being released gradually and may be delayed by up to two weeks. If you don&rsquo;t hear a recording yet, please check back soon&mdash;it will be added as soon as it&rsquo;s available.</p>
+    <p class="hero-heading">Welcome to the &ldquo;More Water Than Anything&rdquo; Digital Experience.</p>
+    <div class="hero-body">
+      <p>This is the booklet that accompanies the LP, now presented as a digital, scrollable experience. You&rsquo;ll hear me reading the stories accompanying each song and picture.</p>
+      <p>Take your time, listen to the music, follow the stories, and explore the images. If you have the physical booklet with you, I recommend looking through it as you listen.</p>
+      <p>And stay until the end. There&rsquo;s a little surprise waiting for you there.</p>
+      <p>Thank you for being part of this journey.</p>
+    </div>
+    <p class="hero-sign">Best, GERD</p>
+  </div>
+  <button id="enter-btn" aria-label="Enter">
+    <span class="vf-corner vf-tl">✦</span>
+    <span class="vf-corner vf-tr">✦</span>
+    <span class="vf-corner vf-bl">✦</span>
+    <span class="vf-corner vf-br">✦</span>
+    <span id="enter-text">ENTER</span>
+  </button>
+</div>
+
+<!-- ── VOID SCREEN (stacking cards) ───────────────────────────────────── -->
+<div id="void-content">
+  <div class="container">
+
+    <div class="stack-scroll" id="stackScroll">
+      <h1 class="sr-only">GERD Archive</h1>
+      <div class="stack-inner" id="stackInner">
+        <!-- stack cards injected by JS -->
+      </div>
+    </div>
+
+    <aside class="corner-elements" aria-hidden="true">
+      <nav class="corner-item top-right">
+        <a href="https://open.spotify.com/artist/1deUwYFF6apHHvv4p3wCjr?si=NZAfbXEySl6llUVuJ_TcPA" target="_blank" rel="noopener" aria-label="Spotify">
+          <img src="brand_assets/Spotify-icon.png" alt="">
+        </a>
+        <a href="https://music.apple.com/se/artist/gerd/1586399854" target="_blank" rel="noopener" aria-label="Apple Music">
+          <img src="brand_assets/apple-music-tight.png" alt="">
+        </a>
+        <a href="https://www.youtube.com/channel/UCJ7iHp7RsVe5808VofR1XYA" target="_blank" rel="noopener" aria-label="YouTube">
+          <img src="brand_assets/youtube-tight.png" alt="">
+        </a>
+        <a href="https://www.instagram.com/gerd_music?utm_source=ig_web_button_share_sheet&amp;igsi=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener" aria-label="Instagram">
+          <img src="brand_assets/instagram-tight.png" alt="">
+        </a>
+        <a href="https://www.tiktok.com/@gerdybirdy__?is_from_webapp=1&amp;sender_device=pc" target="_blank" rel="noopener" aria-label="TikTok">
+          <img src="brand_assets/tiktok-tight.png" alt="">
+        </a>
+      </nav>
+      <div class="corner-item bottom-right" style="font-size:1rem;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-style:italic;">AN AUDIO FAIRYTALE</div>
+    </aside>
+
   </div>
 </div>
 
-<script src="three.min.js"></script>
+<!-- ── PLAYER BAR ──────────────────────────────────────────────────────── -->
+<div class="player-bar" id="player-bar">
+  <div class="player-seek" id="player-seek">
+    <div class="player-seek-fill"  id="player-seek-fill"></div>
+    <div class="player-seek-thumb" id="player-seek-thumb"></div>
+  </div>
+  <div class="player-controls">
+    <div class="player-btns">
+      <button class="player-btn" id="btn-prev" aria-label="Previous"></button>
+      <button class="player-btn player-btn-play" id="btn-play" aria-label="Play / Pause"></button>
+      <button class="player-btn" id="btn-next" aria-label="Next"></button>
+    </div>
+    <div class="player-info">
+      <p class="player-track-name">
+        GERD &nbsp;·&nbsp; <strong id="player-title">—</strong>
+      </p>
+    </div>
+    <span class="player-time" id="player-time">0:00 / 0:00</span>
+  </div>
+</div>
+
 <script>
-// ── SHADERS ──────────────────────────────────────────────────────────────────
-const vertexShader = `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
+// ── SHADER BACKGROUND: "Smoke" flow shader, WebGL1, no libraries ──────────
+// Uniform packing exactly as specified: u_colors[8] plus seven packed vec4s
+// (u_scene/u_shape/u_surface/u_finish/u_transform/u_space/u_cursor).
+(function () {
+  const canvas = document.getElementById('shader-bg');
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
 
-const fragmentShader = `
-  uniform sampler2D uTexture;
-  uniform float uTime;
-  uniform vec2  uMouse;
-  uniform float uMouseActive;
-  uniform float uWaveSpeed;
-  uniform float uWaveFrequency;
-  uniform float uWaveAmplitude;
-  uniform float uMouseRadius;
-
-  varying vec2 vUv;
-
-  void main() {
-    vec2 uv = vUv;
-    float waveStrength = uWaveAmplitude * 0.1;
-
-    float wave1 = sin(uv.y * uWaveFrequency + uTime * uWaveSpeed) * waveStrength;
-    float wave2 = sin(uv.x * uWaveFrequency * 0.7 + uTime * uWaveSpeed * 0.8) * waveStrength * 0.5;
-
-    vec2 distortedUv = uv;
-    distortedUv.x += wave1;
-    distortedUv.y += wave2;
-
-    if (uMouseActive > 0.01) {
-      float dist = distance(uv, uMouse);
-      float mouseInfluence = smoothstep(uMouseRadius, 0.0, dist);
-      float ripple = sin(dist * uWaveFrequency * 5.0 - uTime * uWaveSpeed)
-                     * uWaveAmplitude * 0.05 * mouseInfluence * uMouseActive;
-      distortedUv.x += ripple;
-      distortedUv.y += ripple;
+  const vertexSrc = `
+    attribute vec2 a_position;
+    void main() {
+      gl_Position = vec4(a_position, 0.0, 1.0);
     }
+  `;
 
-    gl_FragColor = texture2D(uTexture, distortedUv);
-  }
-`;
+  const fragmentSrc = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
 
-// ── THREE.JS SETUP ────────────────────────────────────────────────────────────
-const bgCanvas  = document.getElementById('bg-canvas');
-const renderer  = new THREE.WebGLRenderer({ canvas: bgCanvas, antialias: false });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+uniform vec3 u_colors[8];
+uniform vec4 u_scene;      // resolution.xy, time, colour count
+uniform vec4 u_shape;      // scale, intensity, paramA, warp
+uniform vec4 u_surface;    // detail, contrast, brightness, saturation
+uniform vec4 u_finish;     // hue, vignette, blur, grain
+uniform vec4 u_transform;  // seed, rotation, drift, OKLab toggle
+uniform vec4 u_space;      // offset.xy, pointer.xy
+uniform vec4 u_cursor;
 
-const scene  = new THREE.Scene();
-const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-const clock  = new THREE.Clock();
+#define u_resolution u_scene.xy
+#define u_time u_scene.z
+#define u_colorCount u_scene.w
+#define u_scale u_shape.x
+#define u_intensity u_shape.y
+#define u_paramA u_shape.z
+#define u_warp u_shape.w
+#define u_detail u_surface.x
+#define u_contrast u_surface.y
+#define u_brightness u_surface.z
+#define u_saturation u_surface.w
+#define u_hue u_finish.x
+#define u_vignette u_finish.y
+#define u_blur u_finish.z
+#define u_grain u_finish.w
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+#define u_seed u_transform.x
+#else
+// Keep hash inputs inside mediump's guaranteed ±2^14 range.
+#define u_seed mod(u_transform.x, 31.0)
+#endif
+#define u_rotate u_transform.y
+#define u_drift u_transform.z
+#define u_oklab u_transform.w
+#define u_offset u_space.xy
+#define u_mouse u_space.zw
+#define u_cursorPresence u_cursor.x
+#define u_cursorEffect u_cursor.y
+#define u_cursorStrength u_cursor.z
+#define u_cursorRadius u_cursor.w
 
-let mesh      = null;
-let imageAR   = 1;
-let mouseActiveCurrent = 0;
-let mouseActiveTarget  = 0;
-let hasEntered = false;
-const mouseNorm = new THREE.Vector2(-10, -10);
-
-document.addEventListener('mousemove', e => {
-  mouseNorm.set(e.clientX / window.innerWidth, 1 - e.clientY / window.innerHeight);
-  if (!hasEntered) { hasEntered = true; mouseActiveTarget = 1; }
-});
-document.addEventListener('mouseenter', () => { if (hasEntered) mouseActiveTarget = 1; });
-document.addEventListener('mouseleave', () => { mouseActiveTarget = 0; });
-
-const loader = new THREE.TextureLoader();
-loader.load('brand_assets/8B1A0096.png', tex => {
-  tex.minFilter = THREE.LinearFilter;
-  imageAR = tex.image.width / tex.image.height;
-
-  const mat = new THREE.ShaderMaterial({
-    vertexShader,
-    fragmentShader,
-    uniforms: {
-      uTexture:        { value: tex },
-      uTime:           { value: 0 },
-      uMouse:          { value: new THREE.Vector2(-10, -10) },
-      uMouseActive:    { value: 0 },
-      uWaveSpeed:      { value: 0.5 },
-      uWaveFrequency:  { value: 3.0 },
-      uWaveAmplitude:  { value: 0.2 },
-      uMouseRadius:    { value: 0.2 },
-    },
-  });
-
-  mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
-  applyCoverScale();
-  scene.add(mesh);
-});
-
-function applyCoverScale() {
-  if (!mesh) return;
-  const cAR = window.innerWidth / window.innerHeight;
-  if (cAR >= imageAR) mesh.scale.set(1, cAR / imageAR, 1);
-  else                mesh.scale.set(imageAR / cAR, 1, 1);
+float hash21(vec2 p) {
+#ifndef GL_FRAGMENT_PRECISION_HIGH
+  p = mod(p, 31.0);
+#endif
+  p = fract(p * vec2(234.34, 435.345));
+  p += dot(p, p + 34.23);
+  return fract(p.x * p.y);
 }
 
-(function animate() {
-  requestAnimationFrame(animate);
-  mouseActiveCurrent += (mouseActiveTarget - mouseActiveCurrent) * 0.08;
-  if (mesh) {
-    const u = mesh.material.uniforms;
-    u.uTime.value        = clock.getElapsedTime();
-    u.uMouseActive.value = mouseActiveCurrent;
-    if (hasEntered) u.uMouse.value.copy(mouseNorm);
+// Even, un-structured white noise for film grain (Dave Hoskins hash12). The
+// multiply hash above is fine for value noise but shows a faint axis-aligned
+// mesh at integer fragment coords, which reads as a net over flat areas.
+float grainHash(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+vec2 hash22(vec2 p) {
+#ifndef GL_FRAGMENT_PRECISION_HIGH
+  p = mod(p, 31.0);
+#endif
+  float n = sin(dot(p, vec2(41.0, 289.0)));
+  return fract(vec2(15731.743, 7892.321) * n);
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(hash21(i), hash21(i + vec2(1.0, 0.0)), u.x),
+    mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), u.x),
+    u.y);
+}
+
+float fbm(vec2 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 5; i++) {
+    v += a * noise(p);
+    p = p * 2.03 + vec2(17.0, 9.2);
+    a *= 0.5;
   }
-  renderer.render(scene, camera);
+  return v;
+}
+
+// --- OKLab colour mixing (perceptual), gated by u_oklab -----------------------
+vec3 srgbToLinear(vec3 c) {
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)),
+    step(0.04045, c));
+}
+vec3 linearToSrgb(vec3 c) {
+  // max() guards the sRGB branch: out-of-gamut OKLab interpolations can send a
+  // channel negative, and pow(negative, …) is NaN which mix()/step() would
+  // then propagate. The linear branch clips such channels to 0 downstream.
+  return mix(c * 12.92, 1.055 * pow(max(c, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055,
+    step(0.0031308, c));
+}
+vec3 linToOklab(vec3 c) {
+  float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
+  float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
+  float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
+  l = pow(max(l, 0.0), 1.0 / 3.0);
+  m = pow(max(m, 0.0), 1.0 / 3.0);
+  s = pow(max(s, 0.0), 1.0 / 3.0);
+  return vec3(
+    0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
+}
+vec3 oklabToLin(vec3 c) {
+  float l = c.x + 0.3963377774 * c.y + 0.2158037573 * c.z;
+  float m = c.x - 0.1055613458 * c.y - 0.0638541728 * c.z;
+  float s = c.x - 0.0894841775 * c.y - 1.2914855480 * c.z;
+  l = l * l * l; m = m * m * m; s = s * s * s;
+  return vec3(
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+}
+vec3 mixColour(vec3 a, vec3 b, float t) {
+  if (u_oklab > 0.5) {
+    vec3 la = linToOklab(srgbToLinear(a));
+    vec3 lb = linToOklab(srgbToLinear(b));
+    return clamp(linearToSrgb(oklabToLin(mix(la, lb, t))), 0.0, 1.0);
+  }
+  return mix(a, b, t);
+}
+
+// Mix through the recipe colours; x is clamped to 0..1. WebGL1 forbids
+// dynamic uniform indexing in fragment shaders, hence the constant loop.
+vec3 palette(float x) {
+  float n = max(u_colorCount - 1.0, 1.0);
+  float f = clamp(x, 0.0, 1.0) * n;
+  vec3 col = u_colors[0];
+  for (int i = 0; i < 7; i++) {
+    if (float(i) < n)
+      col = mixColour(col, u_colors[i + 1],
+        smoothstep(0.0, 1.0, clamp(f - float(i), 0.0, 1.0)));
+  }
+  return col;
+}
+
+vec3 hueRotate(vec3 col, float a) {
+  const mat3 toYIQ = mat3(0.299, 0.596, 0.211,
+                          0.587, -0.274, -0.523,
+                          0.114, -0.322, 0.312);
+  const mat3 toRGB = mat3(1.0, 1.0, 1.0,
+                          0.956, -0.272, -1.106,
+                          0.621, -0.647, 1.703);
+  vec3 yiq = toYIQ * col;
+  float ca = cos(a), sa = sin(a);
+  yiq = vec3(yiq.x, yiq.y * ca - yiq.z * sa, yiq.y * sa + yiq.z * ca);
+  return toRGB * yiq;
+}
+
+vec3 shade(vec2 uv, vec2 p, float t) {
+  float warp = 2.0 + u_intensity * 4.0;
+  vec2 q = vec2(fbm(p + t * 0.08), fbm(p + vec2(5.2, 1.3) - t * 0.06));
+  vec2 r = vec2(fbm(p + warp * q + vec2(1.7, 9.2)),
+                fbm(p + warp * q + vec2(8.3, 2.8)));
+  return palette(fbm(p + 3.0 * r + u_seed));
+}
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+  vec2 screenUv = uv;
+  vec2 p = (gl_FragCoord.xy - 0.5 * u_resolution.xy)
+    / min(u_resolution.x, u_resolution.y);
+  float cursorMask = 0.0;
+
+  // Cursor modes 1–3 are local distortions. Push shifts the same screen-space
+  // coordinates before field transforms, so Zoom/Rotate don't change its feel.
+  if (u_cursorPresence > 0.001) {
+    // u_mouse is normalized to -1..1 in canvas space. Convert it to the same
+    // aspect-corrected screen space as p so effects stay under the cursor.
+    vec2 cursor = (0.5 * u_mouse * u_resolution.xy)
+      / min(u_resolution.x, u_resolution.y);
+    vec2 cursorDelta = p - cursor;
+    if (u_cursorEffect < 0.5) {
+      p += cursor * u_cursorPresence * u_cursorStrength * 0.55;
+    } else {
+      float cursorDistance = length(cursorDelta);
+      vec2 cursorDirection = cursorDelta / max(cursorDistance, 0.0001);
+      cursorMask = u_cursorPresence
+        * (1.0 - smoothstep(0.0, u_cursorRadius, cursorDistance));
+      if (u_cursorEffect < 1.5) {
+        p -= cursorDirection * cursorMask * u_cursorStrength * 0.24;
+      } else if (u_cursorEffect < 2.5) {
+        float cursorAngle = cursorMask * u_cursorStrength * 2.2;
+        float cc = cos(cursorAngle), cs = sin(cursorAngle);
+        p = cursor + mat2(cc, -cs, cs, cc) * cursorDelta;
+      } else if (u_cursorEffect < 3.5) {
+        float ripple = sin(
+          cursorDistance / max(u_cursorRadius, 0.001) * 18.0 - u_time * 5.0);
+        p -= cursorDirection * ripple * cursorMask * u_cursorStrength * 0.07;
+      }
+    }
+  }
+
+  // Keep presets that read uv (rather than p) in the same warped space.
+  uv = p * min(u_resolution.x, u_resolution.y) / u_resolution.xy + 0.5;
+  p *= u_scale;
+  // Field transform: rotate, pan, pointer push, slow drift.
+  if (abs(u_rotate) > 0.0001) {
+    float cr = cos(u_rotate), sr = sin(u_rotate);
+    p = mat2(cr, -sr, sr, cr) * p;
+  }
+  p += u_offset;
+  if (u_drift > 0.0001)
+    p += u_drift * vec2(sin(u_time * 0.31), cos(u_time * 0.23));
+  // Organic domain warp.
+  if (u_warp > 0.0) {
+    p += u_warp * (vec2(
+      fbm(p * u_detail + u_seed),
+      fbm(p * u_detail + vec2(5.2, 1.3))) - 0.5);
+  }
+  // Shade, with an optional soft 5-tap blur.
+  vec3 col;
+  if (u_blur > 0.0) {
+    float e = u_blur;
+    float pe = e * u_scale;
+    vec2 uvE = vec2(e) * min(u_resolution.x, u_resolution.y) / u_resolution.xy;
+    col  = shade(uv, p, u_time) * 0.36;
+    col += shade(uv + vec2(uvE.x, 0.0), p + vec2(pe, 0.0), u_time) * 0.16;
+    col += shade(uv - vec2(uvE.x, 0.0), p - vec2(pe, 0.0), u_time) * 0.16;
+    col += shade(uv + vec2(0.0, uvE.y), p + vec2(0.0, pe), u_time) * 0.16;
+    col += shade(uv - vec2(0.0, uvE.y), p - vec2(0.0, pe), u_time) * 0.16;
+  } else {
+    col = shade(uv, p, u_time);
+  }
+  // Post: contrast, saturation, hue, brightness, vignette, grain.
+  if (abs(u_contrast - 1.0) > 0.0001)
+    col = (col - 0.5) * u_contrast + 0.5;
+  if (abs(u_saturation - 1.0) > 0.0001) {
+    float luma = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(luma), col, u_saturation);
+  }
+  if (abs(u_hue) > 0.0001)
+    col = hueRotate(col, u_hue);
+  if (abs(u_brightness) > 0.0001)
+    col += u_brightness;
+  if (u_vignette > 0.0001) {
+    float vd = length(screenUv - 0.5) * 1.41421356;
+    col *= 1.0 - u_vignette * smoothstep(0.35, 1.0, vd);
+  }
+  if (u_cursorPresence > 0.001 && u_cursorEffect > 3.5)
+    col += (vec3(0.18) + col * 0.12) * cursorMask * u_cursorStrength;
+  if (u_grain > 0.0001)
+    col += (grainHash(
+      gl_FragCoord.xy + vec2(u_seed * 17.0, u_seed * 31.0)) - 0.5) * u_grain;
+  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}
+  `;
+
+  function compile(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.warn('Shader compile error:', gl.getShaderInfoLog(s));
+      gl.deleteShader(s);
+      return null;
+    }
+    return s;
+  }
+
+  const vs = compile(gl.VERTEX_SHADER, vertexSrc);
+  const fs = compile(gl.FRAGMENT_SHADER, fragmentSrc);
+  if (!vs || !fs) return;
+
+  const program = gl.createProgram();
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.warn('Shader link error:', gl.getProgramInfoLog(program));
+    return;
+  }
+  gl.useProgram(program);
+
+  // Fullscreen triangle — cheaper than a quad, no index buffer needed
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const posLoc = gl.getAttribLocation(program, 'a_position');
+  gl.enableVertexAttribArray(posLoc);
+  gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+  const uColors    = gl.getUniformLocation(program, 'u_colors');
+  const uScene     = gl.getUniformLocation(program, 'u_scene');
+  const uShape     = gl.getUniformLocation(program, 'u_shape');
+  const uSurface   = gl.getUniformLocation(program, 'u_surface');
+  const uFinish    = gl.getUniformLocation(program, 'u_finish');
+  const uTransform = gl.getUniformLocation(program, 'u_transform');
+  const uSpace     = gl.getUniformLocation(program, 'u_space');
+  const uCursor    = gl.getUniformLocation(program, 'u_cursor');
+
+  // "Smoke" preset, colours low→high: #031C26 #1B6CA8 #5AD2F4 #EAF9FF
+  // Blue again, but at the same dark/muted register as the cards and the
+  // outro artwork's near-black slate background — not the original bright
+  // cyan "Smoke" preset, and not the too-green repaint either.
+  const colors = new Float32Array([
+    0.051, 0.078, 0.102, // #0D141A — dark blue
+    0.180, 0.141, 0.063, // #2E2410 — dark brown
+    0.086, 0.137, 0.169, // #16232B — dark blue, slightly lighter
+    0.239, 0.184, 0.090, // #3D2F17 — dark brown, slightly lighter — alternating hues so the flow mixes both regardless of which segment it favors
+    0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0, // unused — u_scene.w caps usage to the first 4
+  ]);
+  gl.uniform3fv(uColors, colors);
+  gl.uniform4f(uShape, 1.72, 0.60, 0.50, 0.00);
+  gl.uniform4f(uSurface, 2.40, 1.00, -0.12, 1.00);
+  gl.uniform4f(uFinish, 0.00, 0.00, 0.000, 0.00);
+  gl.uniform4f(uTransform, 635.0, 0.00, 0.00, 0.0);
+  gl.uniform4f(uSpace, 0.00, 0.00, 0.00, 0.00);
+  gl.uniform4f(uCursor, 0.0, 2.0, 0.65, 0.46); // cursor off — presence 0
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.floor(window.innerWidth * dpr);
+    const h = Math.floor(window.innerHeight * dpr);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+      gl.viewport(0, 0, w, h);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const start = performance.now();
+  let shaderActive = !document.hidden;
+  let rafHandle = null;
+
+  function frame() {
+    rafHandle = requestAnimationFrame(frame);
+    if (!shaderActive) return;
+    const seconds = (performance.now() - start) / 1000;
+    gl.uniform4f(uScene, canvas.width, canvas.height, seconds * 0.97, 4.0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+  frame();
+
+  document.addEventListener('visibilitychange', () => {
+    shaderActive = !document.hidden;
+  });
 })();
+</script>
 
-window.addEventListener('resize', () => {
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  applyCoverScale();
-});
+<script>
+// ── ENTER SCREEN: BUTTON-TRIGGERED REVEAL ──────────────────────────────────
+const enterContent = document.getElementById('enter-content');
+const voidContent  = document.getElementById('void-content');
+const btn          = document.getElementById('enter-btn');
+const enterText    = document.getElementById('enter-text');
 
-// ── SCRAMBLE TEXT ─────────────────────────────────────────────────────────────
+// ── SCRAMBLE TEXT ─────────────────────────────────────────────────────────
 const CHARS  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&';
 const TARGET = 'ENTER';
-const enterText = document.getElementById('enter-text');
-const page      = document.getElementById('page');
 
 function scramble(el, final, duration, onDone) {
   const frames = Math.round(duration / 40);
@@ -278,9 +1049,7 @@ function startIdle() {
 }
 function stopIdle() { clearInterval(idleIv); idleIv = null; }
 
-const btn = document.getElementById('enter-btn');
 let hoverIv = null;
-
 btn.addEventListener('mouseenter', () => {
   stopIdle(); clearInterval(hoverIv);
   hoverIv = scramble(enterText, TARGET, 320);
@@ -290,29 +1059,48 @@ btn.addEventListener('mouseleave', () => {
   enterText.textContent = TARGET;
   startIdle();
 });
-btn.addEventListener('click', () => {
+
+// ── THE TRANSITION: the clipped window expands to fill the screen, then
+// the card stack fades in on top ─────────────────────────────────────────
+let entered = false;
+function enterExperience() {
+  if (entered) return;
+  entered = true;
   stopIdle(); clearInterval(hoverIv);
+
+  // The scramble is now just a quick flourish that plays alongside the
+  // crossfade, not a delay blocking it — previously the transition didn't
+  // start until this finished (720ms of no visible feedback), which read
+  // as the click not registering and prompted repeat presses.
   let f = 0;
   const iv = setInterval(() => {
     let r = '';
     for (let i = 0; i < TARGET.length; i++) r += CHARS[Math.floor(Math.random() * CHARS.length)];
     enterText.textContent = r;
-    if (++f >= 18) {
-      clearInterval(iv);
-      page.classList.add('fadeout');
-      setTimeout(() => { window.location.href = 'void.html'; }, 750);
-    }
-  }, 40);
-});
+    if (++f >= 10) { clearInterval(iv); enterText.textContent = TARGET; }
+  }, 35);
+
+  // Both screens share the same animated shader backdrop now, so there's
+  // nothing to reveal — just a plain crossfade between the two layers.
+  enterContent.classList.add('leaving');
+  voidContent.classList.add('entering');
+
+  setTimeout(() => {
+    enterContent.style.display = 'none';
+    voidContent.classList.add('active');
+  }, 1150);
+}
+
+btn.addEventListener('click', enterExperience);
 
 window.addEventListener('load', () => {
   requestAnimationFrame(() => {
-    page.classList.add('visible');
+    enterContent.classList.add('visible');
     setTimeout(startIdle, 2000);
   });
 });
 
-// ── CUSTOM CURSOR ─────────────────────────────────────────────────────────────
+// ── CUSTOM CURSOR (shared across both screens) ─────────────────────────────
 const cursorEl = document.createElement('img');
 cursorEl.id  = 'custom-cursor';
 cursorEl.src = 'brand_assets/logo-white.png';
@@ -324,5 +1112,397 @@ document.addEventListener('mousemove', e => {
 });
 document.addEventListener('mouseleave', () => { cursorEl.style.opacity = '0'; });
 </script>
+
+<script>
+// ── VOID SCREEN: STACKING CARDS + AUDIO PLAYER ─────────────────────────────
+(function () {
+
+  // ── DATA ─────────────────────────────────────────────────────────────────
+  const PROJECTS = [
+    { id: 2, artist:'GERD', album:'Hurts',                    albumName:'More Water Than Anything', year:'2026', image:'brand_assets/WEB/Hurts_2.png', contain:true, audio:'brand_assets/MEET ME IN THE BLUE /Hurts 2.mp3' },
+    { id: 3, artist:'GERD', album:'Love Economy',             albumName:'More Water Than Anything', year:'2026', image:'brand_assets/WEB/Love_Economy_2.jpg', contain:true, audio:'brand_assets/MEET ME IN THE BLUE /Love Economy.mp3' },
+    { id: 4, artist:'GERD', album:'Truth To Be Told',         albumName:'More Water Than Anything', year:'2026', image:'brand_assets/WEB/Truth_To_Be_Told_2.jpg', contain:true, audio:'brand_assets/MEET ME IN THE BLUE /Truth To Be Told.mp3' },
+    { id: 5, artist:'GERD', album:'Lonley Phone People',      albumName:'More Water Than Anything', year:'2026', image:'brand_assets/WEB/Lonely_Phone_People_2.jpg', contain:true, audio:'brand_assets/MEET ME IN THE BLUE /Lonely Phone People.mp3' },
+    { id: 6, artist:'GERD', album:'Summer Fields (interlude)', albumName:'More Water Than Anything', year:'2026', image:'brand_assets/WEB/Summerfields_Interlude_2.jpg', contain:true, audio:'brand_assets/MEET ME IN THE BLUE /Louder And Louder-Intro.mp3' },
+    { id: 7, artist:'GERD', album:'Louder And Louder',        albumName:'More Water Than Anything', year:'2026', image:'brand_assets/WEB/Louder_And_Louder_2.jpg', contain:true, audio:'brand_assets/MEET ME IN THE BLUE /Louder And Louder-.mp3' },
+    { id: 8, artist:'GERD', album:'Know Me Better',           albumName:'More Water Than Anything', year:'2026', image:'brand_assets/WEB/Know_Me_Better_2.jpg', contain:true, audio:'brand_assets/MEET ME IN THE BLUE /Know Me Better.mp3' },
+    { id: 9, artist:'GERD', album:'Crazy',                    albumName:'More Water Than Anything', year:'2026', image:'brand_assets/WEB/Crazy_2.jpg', contain:true, audio:'brand_assets/MEET ME IN THE BLUE /Crazy.mp3' },
+    { id:10, artist:'GERD', album:'Garden',                   albumName:'More Water Than Anything', year:'2026', image:'brand_assets/WEB/Garden_2.jpg', contain:true, audio:'brand_assets/MEET ME IN THE BLUE /Garden (Wish You Knew).mp3' },
+  ];
+
+  // Preload images
+  PROJECTS.forEach(p => { if (p.image) { const i = new Image(); i.src = p.image; } });
+
+  const ICON_PLAY    = `<svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><polygon points="0,0 10,6 0,12"/></svg>`;
+  const ICON_PAUSE   = `<svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3" height="12"/><rect x="7" y="0" width="3" height="12"/></svg>`;
+  const ICON_PREV    = `<svg width="13" height="12" viewBox="0 0 13 12" fill="currentColor"><rect x="0" y="0" width="2.5" height="12"/><polygon points="13,0 4,6 13,12"/></svg>`;
+  const ICON_NEXT    = `<svg width="13" height="12" viewBox="0 0 13 12" fill="currentColor"><polygon points="0,0 9,6 0,12"/><rect x="10.5" y="0" width="2.5" height="12"/></svg>`;
+  const ICON_SHUFFLE = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h2.5c1 0 1.9.5 2.4 1.4L11 12.6c.5.9 1.4 1.4 2.4 1.4H15"/><path d="M12 2l3 2-3 2"/><path d="M1 13h2.5c1 0 1.9-.5 2.4-1.4l.6-1"/><path d="M9 5l.6-1c.5-.9 1.4-1.4 2.4-1.4H15"/><path d="M12 10l3 2-3 2"/></svg>`;
+  const ICON_REPEAT  = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>`;
+
+  // ── RENDER STACK CARDS ───────────────────────────────────────────────────
+  const stackScroll = document.getElementById('stackScroll');
+  const stackInner   = document.getElementById('stackInner');
+  const totalCards   = PROJECTS.length;
+  const scaleMultiplier = 0.03;
+  const topStep = Math.min(0.21, 2.5 / totalCards); // keep the cascading offset sane for many cards
+
+  const cardEls = PROJECTS.map((project, index) => {
+    const hasAudio = !!project.audio;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'stack-card-wrap';
+
+    const card = document.createElement('div');
+    card.className = 'stack-card';
+    card.style.top = `${1.2 + index * topStep}%`;
+
+    const img = document.createElement('div');
+    img.className = 'stack-card-img';
+    if (project.image) img.style.backgroundImage = `url("${project.image}")`;
+
+    const info = document.createElement('div');
+    info.className = 'stack-card-info';
+
+    const title = document.createElement('h2');
+    title.className = 'stack-card-title';
+    title.textContent = project.album;
+
+    const player = document.createElement('div');
+    player.className = 'stack-player';
+
+    const slider = document.createElement('div');
+    slider.className = 'stack-player-slider';
+    const sliderFill = document.createElement('div');
+    sliderFill.className = 'stack-player-slider-fill';
+    const sliderThumb = document.createElement('div');
+    sliderThumb.className = 'stack-player-slider-thumb';
+    slider.appendChild(sliderFill);
+    slider.appendChild(sliderThumb);
+    if (hasAudio) {
+      slider.addEventListener('click', (e) => {
+        const plIdx = playlist.findIndex(p => p.itemIndex === index);
+        if (plIdx === -1) return;
+        if (currentPL !== plIdx) { loadTrack(plIdx, true); return; }
+        if (!trackAudio.duration) return;
+        const rect = slider.getBoundingClientRect();
+        const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        trackAudio.currentTime = pct * trackAudio.duration;
+        updateProgress();
+      });
+    }
+
+    const times = document.createElement('div');
+    times.className = 'stack-player-times';
+    const timeCur = document.createElement('span');
+    timeCur.textContent = '0:00';
+    const timeDur = document.createElement('span');
+    timeDur.textContent = hasAudio ? '0:00' : '--:--';
+    times.appendChild(timeCur);
+    times.appendChild(timeDur);
+
+    const controls = document.createElement('div');
+    controls.className = 'stack-player-controls';
+
+    const shuffleBtn = document.createElement('button');
+    shuffleBtn.className = 'stack-player-btn';
+    shuffleBtn.setAttribute('aria-label', 'Shuffle');
+    shuffleBtn.innerHTML = ICON_SHUFFLE;
+    shuffleBtn.disabled = !hasAudio;
+    if (hasAudio) shuffleBtn.addEventListener('click', toggleShuffle);
+
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'stack-player-btn';
+    prevBtn.setAttribute('aria-label', 'Previous');
+    prevBtn.innerHTML = ICON_PREV;
+    prevBtn.disabled = !hasAudio;
+    if (hasAudio) prevBtn.addEventListener('click', goPrev);
+
+    const playBtn = document.createElement('button');
+    playBtn.className = 'stack-player-btn stack-player-play';
+    playBtn.setAttribute('aria-label', hasAudio ? 'Play / Pause' : 'No audio yet');
+    playBtn.disabled = !hasAudio;
+    playBtn.innerHTML = ICON_PLAY;
+    if (hasAudio) playBtn.addEventListener('click', () => togglePlayForProject(index));
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'stack-player-btn';
+    nextBtn.setAttribute('aria-label', 'Next');
+    nextBtn.innerHTML = ICON_NEXT;
+    nextBtn.disabled = !hasAudio;
+    if (hasAudio) nextBtn.addEventListener('click', goNext);
+
+    const repeatBtn = document.createElement('button');
+    repeatBtn.className = 'stack-player-btn';
+    repeatBtn.setAttribute('aria-label', 'Repeat');
+    repeatBtn.innerHTML = ICON_REPEAT;
+    repeatBtn.disabled = !hasAudio;
+    if (hasAudio) repeatBtn.addEventListener('click', toggleRepeat);
+
+    controls.appendChild(shuffleBtn);
+    controls.appendChild(prevBtn);
+    controls.appendChild(playBtn);
+    controls.appendChild(nextBtn);
+    controls.appendChild(repeatBtn);
+
+    player.appendChild(slider);
+    player.appendChild(times);
+    player.appendChild(controls);
+
+    info.appendChild(title);
+    info.appendChild(player);
+    card.appendChild(img);
+    card.appendChild(info);
+    wrap.appendChild(card);
+    stackInner.appendChild(wrap);
+
+    return { card, playBtn, index, sliderFill, sliderThumb, timeCur, timeDur, shuffleBtn, repeatBtn };
+  });
+
+  // Capture each card's static (pre-scroll) offset now, before anything can
+  // scroll: `position: sticky` wraps report their *current stuck* position
+  // via offsetTop once scrolled, so reading it later would drift.
+  cardEls.forEach(entry => { entry.wrapTop = entry.card.parentElement.offsetTop; });
+
+  // ── SCROLL-DRIVEN STACK SCALING ──────────────────────────────────────────
+  let stackTicking = false;
+
+  function updateStack() {
+    stackTicking = false;
+    const maxScroll = stackScroll.scrollHeight - stackScroll.clientHeight;
+    const progress  = maxScroll > 0 ? stackScroll.scrollTop / maxScroll : 0;
+
+    cardEls.forEach(({ card, index }) => {
+      const rangeStart = index / totalCards;
+      let t = (progress - rangeStart) / (1 - rangeStart);
+      t = Math.max(0, Math.min(1, t));
+      const scaleTo = 1 - (totalCards - index) * scaleMultiplier;
+      const scale = 1 + t * (scaleTo - 1);
+      card.style.transform = `scale(${scale})`;
+    });
+  }
+
+  stackScroll.addEventListener('scroll', () => {
+    if (stackTicking) return;
+    stackTicking = true;
+    requestAnimationFrame(updateStack);
+  });
+
+  updateStack();
+
+  // ── PLAYER ───────────────────────────────────────────────────────────────
+  const playerBar   = document.getElementById('player-bar');
+  const playerSeek  = document.getElementById('player-seek');
+  const seekFill    = document.getElementById('player-seek-fill');
+  const seekThumb   = document.getElementById('player-seek-thumb');
+  const playerTitle = document.getElementById('player-title');
+  const playerTime  = document.getElementById('player-time');
+  const btnPrev     = document.getElementById('btn-prev');
+  const btnPlay     = document.getElementById('btn-play');
+  const btnNext     = document.getElementById('btn-next');
+
+  btnPrev.innerHTML = ICON_PREV;
+  btnPlay.innerHTML = ICON_PLAY;
+  btnNext.innerHTML = ICON_NEXT;
+
+  // Build playlist from projects that have audio
+  const playlist = PROJECTS.reduce((acc, p, i) => {
+    if (p.audio) acc.push({ project: p, itemIndex: i });
+    return acc;
+  }, []);
+
+  const trackAudio = new Audio();
+  let currentPL  = -1;   // index into playlist
+  let isPlaying  = false;
+  let isShuffle  = false;
+  let isRepeat   = false;
+
+  function formatTime(s) {
+    if (!isFinite(s) || s < 0) return '--:--';
+    const m = Math.floor(s / 60);
+    return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  }
+
+  function setPlayBtn(playing) {
+    btnPlay.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
+  }
+
+  function updateProgress() {
+    const cur   = trackAudio.currentTime;
+    const dur   = trackAudio.duration;
+    const valid = isFinite(dur) && dur > 0;
+    const pct   = valid ? (cur / dur) * 100 : 0;
+    seekFill.style.width   = pct + '%';
+    seekThumb.style.left   = pct + '%';
+    playerTime.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+
+    // Mirror the same progress onto whichever card is currently loaded
+    const activeCard = cardEls.find(c => playlist[currentPL] && playlist[currentPL].itemIndex === c.index);
+    if (activeCard) {
+      activeCard.sliderFill.style.width  = pct + '%';
+      activeCard.sliderThumb.style.left  = pct + '%';
+      activeCard.timeCur.textContent     = formatTime(cur);
+      activeCard.timeDur.textContent     = formatTime(dur);
+    }
+  }
+
+  function syncCards() {
+    cardEls.forEach(({ playBtn, index, sliderFill, sliderThumb, timeCur, shuffleBtn, repeatBtn }) => {
+      shuffleBtn.classList.toggle('active', isShuffle);
+      repeatBtn.classList.toggle('active', isRepeat);
+      if (playBtn.disabled) return;
+      const plIdx = playlist.findIndex(p => p.itemIndex === index);
+      const isActiveTrack = plIdx !== -1 && currentPL === plIdx;
+      playBtn.innerHTML = isActiveTrack && !trackAudio.paused ? ICON_PAUSE : ICON_PLAY;
+      if (!isActiveTrack) {
+        sliderFill.style.width = '0%';
+        sliderThumb.style.left = '0%';
+        timeCur.textContent = '0:00';
+      }
+    });
+  }
+
+  function loadTrack(plIdx, autoplay) {
+    const { project } = playlist[plIdx];
+
+    currentPL = plIdx;
+    trackAudio.src = project.audio;
+    playerTitle.textContent = project.album;
+    playerBar.classList.add('visible');
+    seekFill.style.width = '0%';
+    seekThumb.style.left = '0%';
+    playerTime.textContent = '0:00 / 0:00';
+
+    if (autoplay) {
+      trackAudio.play().catch(e => console.warn('Autoplay blocked:', e));
+      isPlaying = true;
+    } else {
+      isPlaying = false;
+    }
+    setPlayBtn(isPlaying);
+    syncCards();
+  }
+
+  function togglePlay() {
+    if (currentPL === -1 && playlist.length) { loadTrack(0, true); return; }
+    if (trackAudio.paused) {
+      trackAudio.play().catch(console.warn);
+      isPlaying = true;
+    } else {
+      trackAudio.pause();
+      isPlaying = false;
+    }
+    setPlayBtn(isPlaying);
+    syncCards();
+  }
+
+  function togglePlayForProject(index) {
+    const plIdx = playlist.findIndex(p => p.itemIndex === index);
+    if (plIdx === -1) return;
+    if (currentPL === plIdx) {
+      if (trackAudio.paused) {
+        trackAudio.play().catch(e => console.warn('Autoplay blocked:', e));
+        isPlaying = true;
+      } else {
+        trackAudio.pause();
+        isPlaying = false;
+      }
+      setPlayBtn(isPlaying);
+      syncCards();
+    } else {
+      loadTrack(plIdx, true);
+    }
+  }
+
+  // Scrolls the stack so the card for a given playlist index is in view.
+  // Uses the wrapTop captured at load rather than a live offsetTop or
+  // scrollIntoView: with this many overlapping `position: sticky` wraps,
+  // a live offsetTop reflects the current stuck position (not the card's
+  // real slot), and scrollIntoView scrolls forward but not back upward.
+  function scrollToPlaylistTrack(plIdx) {
+    const itemIndex = playlist[plIdx].itemIndex;
+    const entry = cardEls.find(c => c.index === itemIndex);
+    if (entry) stackScroll.scrollTo({ top: entry.wrapTop, behavior: 'smooth' });
+  }
+
+  function goPrev() {
+    if (currentPL === -1) return;
+    if (trackAudio.currentTime > 3 || playlist.length === 1) {
+      trackAudio.currentTime = 0;
+    } else {
+      const prevIdx = (currentPL - 1 + playlist.length) % playlist.length;
+      loadTrack(prevIdx, isPlaying);
+      scrollToPlaylistTrack(prevIdx);
+    }
+  }
+
+  function goNext() {
+    if (currentPL === -1 && playlist.length) { loadTrack(0, true); scrollToPlaylistTrack(0); return; }
+    const nextIdx = isShuffle && playlist.length > 1
+      ? (() => { let r; do { r = Math.floor(Math.random() * playlist.length); } while (r === currentPL); return r; })()
+      : (currentPL + 1) % playlist.length;
+    loadTrack(nextIdx, isPlaying);
+    scrollToPlaylistTrack(nextIdx);
+  }
+
+  function toggleShuffle() {
+    isShuffle = !isShuffle;
+    syncCards();
+  }
+
+  function toggleRepeat() {
+    isRepeat = !isRepeat;
+    syncCards();
+  }
+
+  btnPrev.addEventListener('click', goPrev);
+  btnNext.addEventListener('click', goNext);
+
+  btnPlay.addEventListener('click', togglePlay);
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && e.target === document.body) {
+      e.preventDefault();
+      togglePlay();
+    }
+  });
+
+  // Seek bar
+  let isSeeking = false;
+  function seekTo(e) {
+    if (!trackAudio.duration) return;
+    const rect = playerSeek.getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    trackAudio.currentTime = pct * trackAudio.duration;
+    updateProgress();
+  }
+  playerSeek.addEventListener('mousedown', e => { isSeeking = true; seekTo(e); });
+  document.addEventListener('mousemove',   e => { if (isSeeking) seekTo(e); });
+  document.addEventListener('mouseup',     ()  => { isSeeking = false; });
+
+  // Audio events
+  trackAudio.addEventListener('timeupdate',    updateProgress);
+  trackAudio.addEventListener('loadedmetadata', updateProgress);
+  trackAudio.addEventListener('durationchange', updateProgress);
+  trackAudio.addEventListener('ended', () => {
+    if (isRepeat) {
+      trackAudio.currentTime = 0;
+      trackAudio.play().catch(e => console.warn('Autoplay blocked:', e));
+    } else if (isShuffle && playlist.length > 1) {
+      goNext();
+    } else if (playlist.length > 1 && currentPL < playlist.length - 1) {
+      const nextIdx = currentPL + 1;
+      loadTrack(nextIdx, true);
+      scrollToPlaylistTrack(nextIdx);
+    } else {
+      isPlaying = false;
+      setPlayBtn(false);
+      syncCards();
+    }
+  });
+
+})();
+</script>
+
 </body>
 </html>
